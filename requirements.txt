@@ -1,0 +1,14 @@
+Django>=5.0,<7.0
+django-environ>=0.11
+sqlalchemy>=2.0
+langchain==1.2.0
+langchain-community
+langchain_core
+langchain-openai
+openai>=1.0
+psycopg[binary]>=3.1; platform_system != "Windows"
+gunicorn>=21.2
+whitenoise>=6.6
+pytest>=8.0
+pytest-django>=4.8
+ruff>=0.3

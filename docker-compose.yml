@@ -1,0 +1,14 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: dbchat
+      POSTGRES_USER: dbchat
+      POSTGRES_PASSWORD: dbchat
+    ports:
+      - "5432:5432"
+    volumes:
+      - dbchat_pg:/var/lib/postgresql/data
+
+volumes:
+  dbchat_pg:

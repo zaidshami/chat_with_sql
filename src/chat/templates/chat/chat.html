@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>DBChat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 18px; }
+    .card { border: 1px solid #e5e7eb; border-radius: 14px; padding: 14px; }
+    .row { display: flex; gap: 10px; }
+    .grow { flex: 1; }
+    .msg { padding: 10px 12px; border-radius: 12px; margin: 8px 0; white-space: pre-wrap; }
+    .user { background: #eef2ff; }
+    .assistant { background: #f3f4f6; }
+    textarea { width: 100%; min-height: 58px; resize: vertical; padding: 10px; border-radius: 10px; border: 1px solid #d1d5db; }
+    button { padding: 10px 14px; border-radius: 10px; border: 1px solid #d1d5db; background: white; cursor: pointer; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .small { font-size: 12px; color: #6b7280; }
+    details { margin-top: 8px; }
+    pre { overflow-x: auto; background: #111827; color: #e5e7eb; padding: 10px; border-radius: 10px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h2 style="margin: 6px 0 14px 0;">DBChat</h2>
+    <div class="card" id="chatBox">
+      {% for m in messages %}
+        <div class="msg {% if m.role == 'user' %}user{% else %}assistant{% endif %}">
+          <div class="small">{{ m.role }} • {{ m.created_at }}</div>
+          <div>{{ m.content }}</div>
+        </div>
+      {% empty %}
+        <div class="small">Ask things like: “Top 5 products by revenue”, “How many customers placed orders last month?”</div>
+      {% endfor %}
+    </div>
+
+    <div style="height: 14px;"></div>
+
+    <div class="card">
+      {% csrf_token %}
+      <div class="row">
+        <div class="grow">
+          <textarea id="msg" placeholder="Ask about your database..."></textarea>
+        </div>
+        <div>
+          <button id="sendBtn">Send</button>
+        </div>
+      </div>
+      <div class="small" style="margin-top: 8px;">
+        Session ID: {{ session.id }} • Read-only SQL enforced • Always limited
+      </div>
+      <details>
+        <summary class="small">Show last tool trace (dev)</summary>
+        <pre id="trace">(send a message)</pre>
+      </details>
+    </div>
+  </div>
+
+<script>
+const chatBox = document.getElementById("chatBox");
+const msg = document.getElementById("msg");
+const sendBtn = document.getElementById("sendBtn");
+const traceEl = document.getElementById("trace");
+
+function addMessage(role, content) {
+  const div = document.createElement("div");
+  div.className = "msg " + (role === "user" ? "user" : "assistant");
+  div.innerHTML = `<div class="small">${role}</div><div></div>`;
+  div.querySelector("div:last-child").textContent = content;
+  chatBox.appendChild(div);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i=0; i<cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
+async function send() {
+  const text = msg.value.trim();
+  if (!text) return;
+
+  sendBtn.disabled = true;
+  addMessage("user", text);
+  msg.value = "";
+
+  const res = await fetch("./api/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": getCookie("csrftoken"),
+    },
+    body: JSON.stringify({message: text}),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    addMessage("assistant", data.error || "Error");
+    sendBtn.disabled = false;
+    return;
+  }
+
+  addMessage("assistant", data.answer || "");
+  traceEl.textContent = JSON.stringify(data.metadata?.trace || [], null, 2);
+
+  sendBtn.disabled = false;
+}
+
+sendBtn.addEventListener("click", send);
+msg.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) send();
+});
+</script>
+</body>
+</html>
