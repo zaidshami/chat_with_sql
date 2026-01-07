@@ -1,5 +1,5 @@
 from django.db import models
-
+from pydantic import BaseModel, Field
 class ChatSession(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -16,3 +16,15 @@ class ChatMessage(models.Model):
 
     class Meta:
         ordering = ["created_at"]
+
+
+class UserIntent(BaseModel):
+    db_request: str = Field(
+        description="One-sentence description of what the user wants from the database. Empty string if not a DB request."
+    )
+    wants_chart: bool = Field(
+        description="True only if the user explicitly asked for a chart/graph/plot (bar/line/pie)."
+    )
+    wants_pdf: bool = Field(
+        description="True only if the user explicitly asked for PDF export/download/report."
+    )
