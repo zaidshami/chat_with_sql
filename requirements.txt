@@ -12,3 +12,9 @@ whitenoise>=6.6
 pytest>=8.0
 pytest-django>=4.8
 ruff>=0.3
+# Reports
+reportlab>=4.0
+
+# Charts
+matplotlib>=3.8
+pillow>=10.0
