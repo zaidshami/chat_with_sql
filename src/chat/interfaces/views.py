@@ -6,6 +6,8 @@ from django.views.decorators.http import require_http_methods
 from  chat.application.use_cases import AskDatabase
 from  chat.infrastructure.repositories.django_repo import DjangoChatRepository
 from  chat.infrastructure.llm.sql_chat_service import SqlChatService
+from  chat.infrastructure.visualization.mpl_chart_service import MatplotlibChartServiceImpl
+from  chat.infrastructure.reporting.pdf_report_service import PdfReportServiceImpl
 from  chat.models import ChatSession, ChatMessage
 
 def _get_or_create_session(request: HttpRequest) -> ChatSession:
@@ -39,6 +41,8 @@ def chat_api(request: HttpRequest) -> JsonResponse:
     use_case = AskDatabase(
         repo=DjangoChatRepository(),
         llm_service=SqlChatService(),
+        chart_service=MatplotlibChartServiceImpl(),
+        report_service=PdfReportServiceImpl(),
     )
 
     try:
@@ -46,4 +50,12 @@ def chat_api(request: HttpRequest) -> JsonResponse:
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
-    return JsonResponse({"answer": result["answer"], "metadata": result.get("metadata", {})})
+    meta = result.get("metadata", {}) or {}
+    return JsonResponse(
+        {
+            "answer": result["answer"],
+            "metadata": meta,
+            "chart_url": meta.get("chart_url"),
+            "report_url": meta.get("report_url"),
+        }
+    )

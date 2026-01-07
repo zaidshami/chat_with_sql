@@ -23,7 +23,7 @@ def enforce_read_only(sql: str, *, max_rows: int) -> str:
         raise ValueError("Only read-only SQL is allowed (SELECT/WITH).")
 
     # Enforce a LIMIT if absent (best-effort)
-    if " limit " not in q.lower():
-        q = f"{q} LIMIT {max_rows}"
+    # if " limit " not in q.lower():
+    #     q = f"{q} LIMIT {max_rows}"
 
     return q

@@ -17,8 +17,6 @@
     button { padding: 10px 14px; border-radius: 10px; border: 1px solid #d1d5db; background: white; cursor: pointer; }
     button:disabled { opacity: 0.6; cursor: not-allowed; }
     .small { font-size: 12px; color: #6b7280; }
-    details { margin-top: 8px; }
-    pre { overflow-x: auto; background: #111827; color: #e5e7eb; padding: 10px; border-radius: 10px; }
   </style>
 </head>
 <body>
@@ -29,6 +27,19 @@
         <div class="msg {% if m.role == 'user' %}user{% else %}assistant{% endif %}">
           <div class="small">{{ m.role }} • {{ m.created_at }}</div>
           <div>{{ m.content }}</div>
+          {% if m.role == 'assistant' %}
+            {% if m.metadata.chart_url %}
+              <div style="margin-top: 10px;">
+                <div class="small">Chart preview</div>
+                <img src="{{ m.metadata.chart_url }}" alt="Chart" style="max-width: 100%; border-radius: 10px; border: 1px solid #e5e7eb;" />
+              </div>
+            {% endif %}
+            {% if m.metadata.report_url %}
+              <div style="margin-top: 8px;">
+                <a href="{{ m.metadata.report_url }}" target="_blank" rel="noopener">Download PDF report</a>
+              </div>
+            {% endif %}
+          {% endif %}
         </div>
       {% empty %}
         <div class="small">Ask things like: “Top 5 products by revenue”, “How many customers placed orders last month?”</div>
@@ -50,10 +61,7 @@
       <div class="small" style="margin-top: 8px;">
         Session ID: {{ session.id }} • Read-only SQL enforced • Always limited
       </div>
-      <details>
-        <summary class="small">Show last tool trace (dev)</summary>
-        <pre id="trace">(send a message)</pre>
-      </details>
+      <div class="small" id="latestAssets" style="margin-top: 10px;"></div>
     </div>
   </div>
 
@@ -61,13 +69,35 @@
 const chatBox = document.getElementById("chatBox");
 const msg = document.getElementById("msg");
 const sendBtn = document.getElementById("sendBtn");
-const traceEl = document.getElementById("trace");
+const latestAssetsEl = document.getElementById("latestAssets");
 
-function addMessage(role, content) {
+function addMessage(role, content, chartUrl=null, reportUrl=null) {
   const div = document.createElement("div");
   div.className = "msg " + (role === "user" ? "user" : "assistant");
-  div.innerHTML = `<div class="small">${role}</div><div></div>`;
-  div.querySelector("div:last-child").textContent = content;
+  div.innerHTML = `<div class="small">${role}</div><div class="content"></div>`;
+  div.querySelector(".content").textContent = content;
+
+  if (role === "assistant" && chartUrl) {
+    const wrap = document.createElement("div");
+    wrap.style.marginTop = "10px";
+    wrap.innerHTML = `<div class="small">Chart preview</div>`;
+    const img = document.createElement("img");
+    img.src = chartUrl;
+    img.alt = "Chart";
+    img.style.maxWidth = "100%";
+    img.style.borderRadius = "10px";
+    img.style.border = "1px solid #e5e7eb";
+    wrap.appendChild(img);
+    div.appendChild(wrap);
+  }
+
+  if (role === "assistant" && reportUrl) {
+    const link = document.createElement("div");
+    link.style.marginTop = "8px";
+    link.innerHTML = `<a href="${reportUrl}" target="_blank" rel="noopener">Download PDF report</a>`;
+    div.appendChild(link);
+  }
+
   chatBox.appendChild(div);
   chatBox.scrollTop = chatBox.scrollHeight;
 }
@@ -111,8 +141,12 @@ async function send() {
     return;
   }
 
-  addMessage("assistant", data.answer || "");
-  traceEl.textContent = JSON.stringify(data.metadata?.trace || [], null, 2);
+  addMessage("assistant", data.answer || "", data.chart_url || null, data.report_url || null);
+
+  const bits = [];
+  if (data.chart_url) bits.push(`Chart: <a href="${data.chart_url}" target="_blank" rel="noopener">Open</a>`);
+  if (data.report_url) bits.push(`PDF: <a href="${data.report_url}" target="_blank" rel="noopener">Download</a>`);
+  latestAssetsEl.innerHTML = bits.length ? (`Latest: ` + bits.join(" • ")) : "";
 
   sendBtn.disabled = false;
 }
