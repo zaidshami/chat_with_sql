@@ -77,4 +77,4 @@ Every response is returned in exactly two sections:
 
 ## Screenshot
 
-![Chat UI Screenshot](127.0.0.1_8000_chat.png)
+![Chat UI Screenshot](assets/00_chat.png)
